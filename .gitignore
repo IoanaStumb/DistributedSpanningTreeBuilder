@@ -1,0 +1,8 @@
+bin/threads/SpanningTreeParticipant.class
+bin/threads/SpanningTreeCleaner.class
+bin/cluster/SpanningTree.class
+bin/cluster/Node.class
+bin/cluster/Message.class
+bin/cluster/InitialNode.class
+bin/client/Client.class
+bin/threads/ClientsNotifier.class
