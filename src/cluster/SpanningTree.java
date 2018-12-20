@@ -42,23 +42,18 @@ public class SpanningTree {
 			StringBuilder stringBuilder = new StringBuilder();
 			stringBuilder.append(String.format("{\"%d\": [", creatorNodePort));
 			
-			System.out.println(stringBuilder.toString());
-			
 			List<String> childrenExpressionTrees = 
 					this.finishedChildrenResponses.entrySet().stream()
 					.map(entry -> entry.getValue())
 					.collect(Collectors.toList());
-			childrenExpressionTrees.forEach(System.out::println);
 		    String joinResult = String.join(", ", childrenExpressionTrees);
-		    
-		    System.out.println(joinResult);
-		    
+
 		    stringBuilder.append(joinResult);
 		    stringBuilder.append("]}");
 		    
 			expression = stringBuilder.toString();
 			
-			System.out.println(stringBuilder.toString());
+			// System.out.println(stringBuilder.toString());
 		}
 		
 		this.treeExpression = expression;

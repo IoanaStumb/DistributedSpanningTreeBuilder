@@ -8,6 +8,7 @@ import java.net.SocketException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import cluster.Message;
@@ -17,16 +18,16 @@ public class SpanningTreeParticipant extends Thread {
 
 	private volatile boolean shouldRun = true;
 	private int creatorNodePort;
-	private volatile boolean creatorIsRoot;
-	private volatile boolean creatorIsBuildingTree;
+	private AtomicBoolean creatorIsRoot;
+	private AtomicBoolean creatorIsBuildingTree;
 	private InetAddress address;
 	private Set<Integer> internalNeighborPorts;
 	private List<SpanningTree> spanningTrees;
 	
-	private DatagramSocket socket = null;
+	private DatagramSocket internalSocket = null;
 	private DatagramPacket request, response = null;
 	
-	public SpanningTreeParticipant(String name, int creatorNodePort, boolean creatorIsRoot, boolean creatorIsBuildingTree, InetAddress address, 
+	public SpanningTreeParticipant(String name, int creatorNodePort, AtomicBoolean creatorIsRoot, AtomicBoolean creatorIsBuildingTree, InetAddress address, 
 			Set<Integer> internalNeighborPorts, List<SpanningTree> spanningTrees, DatagramSocket internalSocket) throws SocketException {
 		super(name);
 		this.creatorNodePort = creatorNodePort;
@@ -36,9 +37,9 @@ public class SpanningTreeParticipant extends Thread {
 		this.internalNeighborPorts = internalNeighborPorts;
 		this.spanningTrees = spanningTrees;
 		
-		socket = internalSocket;
+		this.internalSocket = internalSocket;
 	}
-	
+		
 	@Override
 	public void run() {
 		try {
@@ -46,12 +47,12 @@ public class SpanningTreeParticipant extends Thread {
 			request = new DatagramPacket(buffer, buffer.length);
 			
 			while (shouldRun) {
-				socket.receive(request);
+				internalSocket.receive(request);
 							
 				int senderPort = request.getPort();	
 				Message message = Message.convertToMessage(request.getData(), request.getOffset(), request.getLength());
 				
-				System.out.println("[" + this.getName() + ":" + this.creatorNodePort + "]: Received message: " + message.action + " from node: " + senderPort);
+				System.out.println("Received message: " + message.action + " from node: " + senderPort);
 				
 				// check if we already have a tree started for this identifier 
 				// if not, start it
@@ -75,7 +76,7 @@ public class SpanningTreeParticipant extends Thread {
 							buffer = new Message(message.identifier, "p").toBytes();
 							
 							response = new DatagramPacket(buffer, buffer.length, address, senderPort);
-							socket.send(response);
+							internalSocket.send(response);
 							
 							// if I am leaf with only one neighbor, I should stop
 							if (internalNeighborPorts.size() == 1 && internalNeighborPorts.iterator().next() == spanningTree.parentPort) {								
@@ -86,7 +87,7 @@ public class SpanningTreeParticipant extends Thread {
 								buffer = new Message(message.identifier, "f", expressionTree).toBytes();
 								
 								response = new DatagramPacket(buffer, buffer.length, address, senderPort);
-								socket.send(response);
+								internalSocket.send(response);
 							}
 							else {
 								// else send "m" to neighbors	
@@ -95,7 +96,7 @@ public class SpanningTreeParticipant extends Thread {
 								for(Integer neighborPort : internalNeighborPorts) {
 									if (neighborPort != senderPort) {
 										response = new DatagramPacket(buffer, buffer.length, address, neighborPort);
-										socket.send(response);
+										internalSocket.send(response);
 									}
 								}	
 							}
@@ -105,7 +106,7 @@ public class SpanningTreeParticipant extends Thread {
 							buffer = new Message(message.identifier, "a").toBytes();
 							
 							response = new DatagramPacket(buffer, buffer.length, address, senderPort);
-							socket.send(response);
+							internalSocket.send(response);
 						}
 						break;
 						
@@ -117,15 +118,6 @@ public class SpanningTreeParticipant extends Thread {
 						if (sentToAllNeighbors(spanningTree)) {
 							System.out.println("I finished my neighbors!");
 							spanningTree.receivedResponsesFromAllNeighbors = true;
-							
-							// send "lalala" to parent to signal finished
-							// TODO: remove after finishing "f" case
-							if (creatorNodePort != spanningTree.parentPort) {
-								buffer = new Message(message.identifier, "lalala").toBytes();
-								
-								response = new DatagramPacket(buffer, buffer.length, address, spanningTree.parentPort);
-								socket.send(response);
-							}
 						}					
 						break;
 						
@@ -138,34 +130,43 @@ public class SpanningTreeParticipant extends Thread {
 							System.out.println("I finished my neighbors!");
 							spanningTree.receivedResponsesFromAllNeighbors = true;
 							
-							// send "lalala" to parent to signal finished
-							// TODO: remove after finishing "f" case
-							if (creatorNodePort != spanningTree.parentPort) {
-								buffer = new Message(message.identifier, "lalala").toBytes();
-
+							// if I don't have any kids, I should also stop
+							if (spanningTree.childrenPorts.size() == 0) {
+								
+								// send "f [expressionTree]" to parent to signal finished
+								String expressionTree = spanningTree.buildAndSetTreeExpression(creatorNodePort);
+								buffer = new Message(message.identifier, "f", expressionTree).toBytes();
+								
 								response = new DatagramPacket(buffer, buffer.length, address, spanningTree.parentPort);
-								socket.send(response);
+								internalSocket.send(response);
 							}
 						}
 						break;
 						
 					case "f":
-						spanningTree.finishedChildrenResponses.put(senderPort, message.optionalContent);
+						System.out.println("Received expression tree: " + message.optionalContent);
 						
-						// if all my kids finished and I am the root, I should signal this somehow to the clients
+						spanningTree.finishedChildrenResponses.put(senderPort, message.optionalContent);
+
+						// if all my kids finished
 						if (spanningTree.receivedResponsesFromAllNeighbors && allChildrenFinished(spanningTree)) {
 							System.out.println("All my kids finished, good job!");
 							
-							// build the expression tree for this spanning tree and send it to parent
+							// build and set my expression for this tree
 							String expressionTree = spanningTree.buildAndSetTreeExpression(creatorNodePort);
-							buffer = new Message(message.identifier, "f", expressionTree).toBytes();
+							System.out.println("My final expression for this tree: " + expressionTree);
 							
-							response = new DatagramPacket(buffer, buffer.length, address, spanningTree.parentPort);
-							socket.send(response);
-							
-							if (creatorNodePort == spanningTree.id) {
-								creatorIsRoot = true;
-								creatorIsBuildingTree = false;
+							// if I am not the tree root => send the expression for this spanning tree to my parent						
+							if (creatorNodePort != spanningTree.id) {								
+								buffer = new Message(message.identifier, "f", expressionTree).toBytes();
+								
+								response = new DatagramPacket(buffer, buffer.length, address, spanningTree.parentPort);
+								internalSocket.send(response);
+							}
+							// if I am the tree root => set my check values 
+							else {
+								creatorIsRoot.set(true);
+								creatorIsBuildingTree.set(false);
 							}
 						}
 						break;
@@ -198,15 +199,16 @@ public class SpanningTreeParticipant extends Thread {
 		Set<Integer> temporaryFinishedChildrenPorts = 
 				spanningTree.finishedChildrenResponses.entrySet().stream()
 				.map(entry -> entry.getKey())
-				.collect(Collectors.toSet());
-		temporaryFinishedChildrenPorts.removeAll(spanningTree.childrenPorts);
+				.collect(Collectors.toSet());		
+		Set<Integer> temporaryChildrenPorts = new HashSet<>(spanningTree.childrenPorts);
+		temporaryChildrenPorts.removeAll(temporaryFinishedChildrenPorts);	
 		
-		return temporaryFinishedChildrenPorts.size() == 0;
+		return temporaryChildrenPorts.size() == 0;
 	}
 	
 	private void closeAll() {
 		this.shouldRun = false;
-		if (this.socket != null)
-			this.socket.close();
+		if (this.internalSocket != null)
+			this.internalSocket.close();
 	}
 }

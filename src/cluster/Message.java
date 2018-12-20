@@ -36,7 +36,6 @@ public class Message {
 	}
 	
 	public static Message convertToMessage(String input) {
-		System.out.println(input);
 		String[] tokens = input.split("\\|");
 		
 		if (tokens.length == 2) {

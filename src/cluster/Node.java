@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import threads.ClientsNotifier;
 import threads.SpanningTreeCleaner;
@@ -22,8 +23,8 @@ public class Node {
 	private InetAddress address;
 	private Set<Integer> internalNeighborPorts;
 	
-	private volatile boolean isRootForTree;
-	private volatile boolean isBuildingTree;
+	private AtomicBoolean isRootForTree;
+	private AtomicBoolean isBuildingTree;
 	private List<SpanningTree> spanningTrees;
 	private Queue<SocketAddress> waitingClients;
 	
@@ -34,8 +35,8 @@ public class Node {
 		spanningTrees = new ArrayList<>();
 		internalNeighborPorts = new HashSet<>();
 		waitingClients = new ConcurrentLinkedQueue<>();
-		isRootForTree = false;
-		isBuildingTree = false;
+		isRootForTree = new AtomicBoolean(false);
+		isBuildingTree = new AtomicBoolean(false);
 	}
 
 	public void initialize(int externalPort, int internalPort) throws IOException {
@@ -77,7 +78,8 @@ public class Node {
 		SpanningTreeParticipant spanningTreeParticipant = new SpanningTreeParticipant("SpanningTreeParticipant", internalPort, 
 				isRootForTree, isBuildingTree, address, internalNeighborPorts, spanningTrees, internalSocket);
 		SpanningTreeCleaner spanningTreeCleaner = new SpanningTreeCleaner();
-		ClientsNotifier clientsNotifier = new ClientsNotifier();
+		ClientsNotifier clientsNotifier = new ClientsNotifier("ClientsNotifier", internalPort, isRootForTree, spanningTrees,
+				waitingClients, externalSocket, 2000);
 		
 		spanningTreeParticipant.start();
 		spanningTreeCleaner.start();
@@ -99,14 +101,12 @@ public class Node {
 				
 				switch(message) {
 					case "request-tree":
-						if (isRootForTree) {
+						if (isRootForTree.get()) {
 							// find tree and return the treeExpression
-							String treeExpression = spanningTrees
-									.stream()
+							String treeExpression = spanningTrees.stream()
 									.filter(st -> st.id == internalPort)
 									.findFirst()
-									.get()
-									.treeExpression;
+									.get().treeExpression;
 							
 							System.out.println("[Node " + this.internalPort + "]: My tree expression: " + treeExpression);
 							
@@ -118,9 +118,9 @@ public class Node {
 							// add clients to waiting queue
 							waitingClients.add(senderAddress);
 							
-							if (!isBuildingTree) {
+							if (!isBuildingTree.get()) {
 								System.out.println("[Node " + this.internalPort + "]: Starting to build my spanning tree.");
-								isBuildingTree = true;
+								isBuildingTree.set(true);
 							
 								// start building own tree
 								SpanningTree myTree = new SpanningTree(internalPort);
@@ -132,7 +132,7 @@ public class Node {
 									response = new DatagramPacket(buffer, buffer.length, address, neighborPort);
 									internalSocket.send(response);
 								}
-							}	
+							}
 						}
 						break;
 					
