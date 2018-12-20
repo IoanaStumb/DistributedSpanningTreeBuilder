@@ -67,13 +67,13 @@ public class SpanningTreeParticipant extends Thread {
 				}
 				
 				switch(message.action) {					
-					case "m":
+					case "join-tree":
 						// if I have no parent for this spanning tree, set the parent
 						if (spanningTree.parentPort == -1) {
 							spanningTree.parentPort = senderPort;
 							
 							// send "p" to my parent for this spanning tree
-							buffer = new Message(message.identifier, "p").toBytes();
+							buffer = new Message(message.identifier, "parent").toBytes();
 							
 							response = new DatagramPacket(buffer, buffer.length, address, senderPort);
 							internalSocket.send(response);
@@ -84,14 +84,14 @@ public class SpanningTreeParticipant extends Thread {
 								
 								// send "f [expressionTree]" to parent to signal finished
 								String expressionTree = spanningTree.buildAndSetTreeExpression(creatorNodePort);
-								buffer = new Message(message.identifier, "f", expressionTree).toBytes();
+								buffer = new Message(message.identifier, "finished", expressionTree).toBytes();
 								
 								response = new DatagramPacket(buffer, buffer.length, address, senderPort);
 								internalSocket.send(response);
 							}
 							else {
 								// else send "m" to neighbors	
-								buffer = new Message(message.identifier, "m").toBytes();
+								buffer = new Message(message.identifier, "join-tree").toBytes();
 								
 								for(Integer neighborPort : internalNeighborPorts) {
 									if (neighborPort != senderPort) {
@@ -103,14 +103,14 @@ public class SpanningTreeParticipant extends Thread {
 						}
 						else {
 							// send "a" to senderPort
-							buffer = new Message(message.identifier, "a").toBytes();
+							buffer = new Message(message.identifier, "already").toBytes();
 							
 							response = new DatagramPacket(buffer, buffer.length, address, senderPort);
 							internalSocket.send(response);
 						}
 						break;
 						
-					case "p":
+					case "parent":
 						// add sender to my kids
 						spanningTree.childrenPorts.add(senderPort);
 						
@@ -121,7 +121,7 @@ public class SpanningTreeParticipant extends Thread {
 						}					
 						break;
 						
-					case "a":
+					case "already":
 						// add sender to my others
 						spanningTree.otherPorts.add(senderPort);
 						
@@ -135,7 +135,7 @@ public class SpanningTreeParticipant extends Thread {
 								
 								// send "f [expressionTree]" to parent to signal finished
 								String expressionTree = spanningTree.buildAndSetTreeExpression(creatorNodePort);
-								buffer = new Message(message.identifier, "f", expressionTree).toBytes();
+								buffer = new Message(message.identifier, "finished", expressionTree).toBytes();
 								
 								response = new DatagramPacket(buffer, buffer.length, address, spanningTree.parentPort);
 								internalSocket.send(response);
@@ -143,7 +143,7 @@ public class SpanningTreeParticipant extends Thread {
 						}
 						break;
 						
-					case "f":
+					case "finished":
 						System.out.println("Received expression tree: " + message.optionalContent);
 						
 						spanningTree.finishedChildrenResponses.put(senderPort, message.optionalContent);
@@ -158,7 +158,7 @@ public class SpanningTreeParticipant extends Thread {
 							
 							// if I am not the tree root => send the expression for this spanning tree to my parent						
 							if (creatorNodePort != spanningTree.id) {								
-								buffer = new Message(message.identifier, "f", expressionTree).toBytes();
+								buffer = new Message(message.identifier, "finished", expressionTree).toBytes();
 								
 								response = new DatagramPacket(buffer, buffer.length, address, spanningTree.parentPort);
 								internalSocket.send(response);

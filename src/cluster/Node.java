@@ -113,7 +113,7 @@ public class Node {
 							myTree.parentPort = internalPort;
 							spanningTrees.add(myTree);
 							
-							buffer = new Message(internalPort, "m").toBytes();
+							buffer = new Message(internalPort, "join-tree").toBytes();
 							for(Integer neighborPort : internalNeighborPorts) {
 								response = new DatagramPacket(buffer, buffer.length, address, neighborPort);
 								internalSocket.send(response);
