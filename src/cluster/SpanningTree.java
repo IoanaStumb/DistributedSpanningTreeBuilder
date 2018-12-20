@@ -1,5 +1,6 @@
 package cluster;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,6 +18,7 @@ public class SpanningTree {
 	// meta information
 	public boolean receivedResponsesFromAllNeighbors;
 	public Map<Integer, String> finishedChildrenResponses;
+	public Instant lastMessageSentAt;
 	
 	public SpanningTree(int rootPort) {
 		this.id = rootPort;
@@ -28,6 +30,7 @@ public class SpanningTree {
 		
 		this.receivedResponsesFromAllNeighbors = false;
 		this.finishedChildrenResponses = new HashMap<>();
+		this.lastMessageSentAt = Instant.now();
 	}
 	
 	public String buildAndSetTreeExpression(int creatorNodePort) {

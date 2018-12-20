@@ -1,5 +1,8 @@
 package threads;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -27,11 +30,39 @@ public class SpanningTreeCleaner extends Thread {
 	}
 	
 	@Override
-	public void run() {
+	public void run() {	
+		List<Integer> treesToRemove = new ArrayList<>();
+		
 		while (shouldRun) {
 			try {
-				Thread.sleep((long) checkTreesAfterMs);
-			} 
+				Thread.sleep((long) checkTreesAfterMs);			
+				Instant now = Instant.now();
+				
+				// check for trees to remove
+				for (Integer key : spanningTrees.keySet()) {
+					if (now.minusMillis(cleanTreeAfterMs).isAfter(spanningTrees.get(key).lastMessageSentAt)) {
+						treesToRemove.add(key);
+					}
+				}
+				
+				if (!treesToRemove.isEmpty()) {
+					System.out.println("[" + this.getName() + ":" + this.creatorNodePort + "]: I'm cleaning up old trees for nodes: ");
+					treesToRemove.forEach(tree -> System.out.print(tree));
+					System.out.println();
+					
+					for (Integer tree : treesToRemove) {
+						spanningTrees.remove(tree);
+						
+						// if I am removing my own tree => reset my check values 
+						if (tree == creatorNodePort) {
+							creatorIsRoot.set(false);
+							creatorIsBuildingTree.set(false);
+						}
+					}
+					
+					treesToRemove.clear();
+				}
+			}
 			catch (InterruptedException exception) {
 				exception.printStackTrace();
 				finish();

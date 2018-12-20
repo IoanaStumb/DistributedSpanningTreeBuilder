@@ -128,7 +128,7 @@ public class SpanningTreeParticipant extends Thread {
 							spanningTree.receivedResponsesFromAllNeighbors = true;
 							
 							// if I don't have any kids, I should also stop
-							if (spanningTree.childrenPorts.size() == 0) {
+							if (spanningTree.childrenPorts.isEmpty()) {
 								
 								// send "f [expressionTree]" to parent to signal finished
 								String expressionTree = spanningTree.buildAndSetTreeExpression(creatorNodePort);
@@ -188,7 +188,7 @@ public class SpanningTreeParticipant extends Thread {
 		temporaryNeighborPorts.removeAll(spanningTree.otherPorts);
 		temporaryNeighborPorts.remove(spanningTree.parentPort);
 		
-		return temporaryNeighborPorts.size() == 0;
+		return temporaryNeighborPorts.isEmpty();
 	}
 	
 	private boolean allChildrenFinished(SpanningTree spanningTree) {
@@ -200,7 +200,7 @@ public class SpanningTreeParticipant extends Thread {
 		Set<Integer> temporaryChildrenPorts = new HashSet<>(spanningTree.childrenPorts);
 		temporaryChildrenPorts.removeAll(temporaryFinishedChildrenPorts);	
 		
-		return temporaryChildrenPorts.size() == 0;
+		return temporaryChildrenPorts.isEmpty();
 	}
 	
 	private void closeAll() {

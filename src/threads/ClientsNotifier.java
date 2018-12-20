@@ -50,10 +50,10 @@ public class ClientsNotifier extends Thread {
 						System.out.println("NOTIFYING CLIENT! " + client);
 
 						// find tree and return the treeExpression
-						String treeExpression = spanningTrees.get(creatorNodePort).treeExpression;
-						System.out.println("[" + this.getName() + ":" + this.creatorNodePort + "]: Tree expression: " + treeExpression);
+						SpanningTree spanningTree = spanningTrees.get(creatorNodePort);
+						System.out.println("[" + this.getName() + ":" + this.creatorNodePort + "]: Tree expression: " + spanningTree.treeExpression);
 
-						buffer = String.valueOf(treeExpression).getBytes();
+						buffer = String.valueOf(spanningTree.treeExpression).getBytes();
 						response = new DatagramPacket(buffer, buffer.length, client);
 						
 						externalSocket.send(response);

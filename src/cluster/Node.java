@@ -78,7 +78,7 @@ public class Node {
 		SpanningTreeParticipant spanningTreeParticipant = new SpanningTreeParticipant("SpanningTreeParticipant", internalPort, 
 				isRootForTree, isBuildingTree, address, internalNeighborPorts, spanningTrees, internalSocket);
 		SpanningTreeCleaner spanningTreeCleaner = new SpanningTreeCleaner("SpanningTreeCleaner", internalPort, isRootForTree,
-				isBuildingTree, spanningTrees, 2000, 5000);
+				isBuildingTree, spanningTrees, 5000, 10000);
 		ClientsNotifier clientsNotifier = new ClientsNotifier("ClientsNotifier", internalPort, isRootForTree, spanningTrees,
 				waitingClients, externalSocket, 2000);
 		
