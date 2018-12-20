@@ -175,7 +175,7 @@ public class SpanningTreeParticipant extends Thread {
 		}
 		catch(IOException exception) {
 			exception.printStackTrace();
-			closeAll();
+			finish();
 		}
 	}
 	

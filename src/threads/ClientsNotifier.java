@@ -68,7 +68,7 @@ public class ClientsNotifier extends Thread {
 			} 
 			catch (IOException | InterruptedException exception) {
 				exception.printStackTrace();
-				closeAll();
+				finish();
 			}
 		}
 	}
