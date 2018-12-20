@@ -5,13 +5,22 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import threads.ClientsNotifier;
 import threads.SpanningTreeCleaner;
@@ -48,32 +57,38 @@ public class Node {
 		internalSocket = new DatagramSocket(this.internalPort);
 		
 		// replace with neighbor initialization routine
-		switch(this.internalPort) {
-			case 12000:
-				internalNeighborPorts.add(12001);
-				internalNeighborPorts.add(12002);
-				break;
-			case 12001:
-				internalNeighborPorts.add(12003);
-				internalNeighborPorts.add(12004);
-				break;
-			case 12002:
-				internalNeighborPorts.add(12001);
-				internalNeighborPorts.add(12003);
-				break;
-			case 12003:
-				internalNeighborPorts.add(12006);
-				break;
-			case 12004:
-				internalNeighborPorts.add(12005);
-				break;
-			case 12005:
-				internalNeighborPorts.add(12004);
-				break;
-			case 12006:
-				internalNeighborPorts.add(12003);
-				break;
-		}
+//		switch(this.internalPort) {
+//			case 12000:
+//				internalNeighborPorts.add(12001);
+//				internalNeighborPorts.add(12002);
+//				break;
+//			case 12001:
+//				internalNeighborPorts.add(12003);
+//				internalNeighborPorts.add(12004);
+//				break;
+//			case 12002:
+//				internalNeighborPorts.add(12001);
+//				internalNeighborPorts.add(12003);
+//				break;
+//			case 12003:
+//				internalNeighborPorts.add(12006);
+//				break;
+//			case 12004:
+//				internalNeighborPorts.add(12005);
+//				break;
+//			case 12005:
+//				internalNeighborPorts.add(12004);
+//				break;
+//			case 12006:
+//				internalNeighborPorts.add(12003);
+//				break;
+//		}
+		String topology = readFile("E:\\Master\\Anul II\\PPAD\\GitProjects\\DistributedSpanningTreeBuilder\\src\\topology.json", StandardCharsets.UTF_8);
+		
+		List<TopologyNode> allNodes = new Gson().fromJson(topology, 
+				new TypeToken<ArrayList<TopologyNode>>(){}.getType());
+		
+		allNodes.forEach(node -> System.out.println(node.node));
 		
 		SpanningTreeParticipant spanningTreeParticipant = new SpanningTreeParticipant("SpanningTreeParticipant", internalPort, 
 				isRootForTree, isBuildingTree, address, internalNeighborPorts, spanningTrees, internalSocket);
@@ -133,15 +148,12 @@ public class Node {
 		}
 	}
 	
+	private static String readFile(String path, Charset encoding) throws IOException {
+		byte[] encoded = Files.readAllBytes(Paths.get(path));
+		return new String(encoded, encoding);
+	}
+	
 	public static void main(String[] args) {
-		
-		// port is received by parameter
-		// each node should have a list of its neighbors
-		// if I am the starter, send a message to my neighbors
-		// then enter a while loop
-		// while what? -> while algorithm not finished? -> somebody needs to send a finished message
-		// and start receiving and processing messages
-		
 		Node clusterNode;
 		
 		try {
