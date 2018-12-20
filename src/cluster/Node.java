@@ -97,41 +97,26 @@ public class Node {
 				SocketAddress senderAddress = request.getSocketAddress();
 				String message = new String(request.getData(), request.getOffset(), request.getLength());
 				
-				System.out.println("Adresa si port client: " + senderAddress + ", mesaj: " + message);
+				System.out.println("Client address and port: " + senderAddress + ", message: " + message);
 				
 				switch(message) {
 					case "request-tree":
-						if (isRootForTree.get()) {
-							// find tree and return the treeExpression
-							String treeExpression = spanningTrees.stream()
-									.filter(st -> st.id == internalPort)
-									.findFirst()
-									.get().treeExpression;
+						// add clients to waiting queue, ClientsNotifier thread will deal with them
+						waitingClients.add(senderAddress);
+						
+						if (!isRootForTree.get() && !isBuildingTree.get()) {
+							System.out.println("[Node " + this.internalPort + "]: Starting to build my spanning tree.");
+							isBuildingTree.set(true);
+						
+							// start building own tree
+							SpanningTree myTree = new SpanningTree(internalPort);
+							myTree.parentPort = internalPort;
+							spanningTrees.add(myTree);
 							
-							System.out.println("[Node " + this.internalPort + "]: My tree expression: " + treeExpression);
-							
-							buffer = String.valueOf(treeExpression).getBytes();
-							response = new DatagramPacket(buffer, buffer.length, senderAddress);
-							externalSocket.send(response);
-						}
-						else {
-							// add clients to waiting queue
-							waitingClients.add(senderAddress);
-							
-							if (!isBuildingTree.get()) {
-								System.out.println("[Node " + this.internalPort + "]: Starting to build my spanning tree.");
-								isBuildingTree.set(true);
-							
-								// start building own tree
-								SpanningTree myTree = new SpanningTree(internalPort);
-								myTree.parentPort = internalPort;
-								spanningTrees.add(myTree);
-								
-								buffer = new Message(internalPort, "m").toBytes();
-								for(Integer neighborPort : internalNeighborPorts) {
-									response = new DatagramPacket(buffer, buffer.length, address, neighborPort);
-									internalSocket.send(response);
-								}
+							buffer = new Message(internalPort, "m").toBytes();
+							for(Integer neighborPort : internalNeighborPorts) {
+								response = new DatagramPacket(buffer, buffer.length, address, neighborPort);
+								internalSocket.send(response);
 							}
 						}
 						break;

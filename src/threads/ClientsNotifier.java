@@ -3,7 +3,6 @@ package threads;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.Queue;
@@ -37,35 +36,37 @@ public class ClientsNotifier extends Thread {
 
 	@Override
 	public void run() {
-		// check periodically (variable for this) if there are waiting clients & a tree
-		// has been built
-		// if so, send the tree to the clients and clear the waiting clients list
 		byte[] buffer = new byte[256];
-
+		
 		while (shouldRun) {
 			try {
-				if (waitingClients.size() > 0 && creatorIsRoot.get()) {
-					// while we still have clients, send tree
-					SocketAddress client = waitingClients.peek();
-
-					// find tree and return the treeExpression
-					String treeExpression = spanningTrees.stream()
-							.filter(st -> st.id == creatorNodePort)
-							.findFirst()
-							.get().treeExpression;
-
-					System.out.println("[" + this.getName() + ":" + this.creatorNodePort + "]: Tree expression: " + treeExpression);
-
-					buffer = String.valueOf(treeExpression).getBytes();
-					response = new DatagramPacket(buffer, buffer.length, client);
+				// check if there is a root tree for this node
+				if (creatorIsRoot.get()) {		
 					
-					externalSocket.send(response);
-					waitingClients.poll();
+					// while we have clients, send tree
+					while (waitingClients.size() > 0) {						
+						
+						SocketAddress client = waitingClients.peek();
+						System.out.println("NOTIFYING CLIENT! " + client);
+
+						// find tree and return the treeExpression
+						String treeExpression = spanningTrees.stream()
+								.filter(st -> st.id == creatorNodePort)
+								.findFirst()
+								.get().treeExpression;
+						System.out.println("[" + this.getName() + ":" + this.creatorNodePort + "]: Tree expression: " + treeExpression);
+
+						buffer = String.valueOf(treeExpression).getBytes();
+						response = new DatagramPacket(buffer, buffer.length, client);
+						
+						externalSocket.send(response);
+						waitingClients.poll();
+					}					
 				}
 				
-				// wait for the specified ms
+				Thread.sleep((long) checkForClientsAfterMs);
 			} 
-			catch (IOException exception) {
+			catch (IOException | InterruptedException exception) {
 				exception.printStackTrace();
 				closeAll();
 			}
