@@ -6,7 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -22,13 +22,13 @@ public class SpanningTreeParticipant extends Thread {
 	private AtomicBoolean creatorIsBuildingTree;
 	private InetAddress address;
 	private Set<Integer> internalNeighborPorts;
-	private List<SpanningTree> spanningTrees;
+	private Map<Integer, SpanningTree> spanningTrees;
 	
 	private DatagramSocket internalSocket = null;
 	private DatagramPacket request, response = null;
 	
 	public SpanningTreeParticipant(String name, int creatorNodePort, AtomicBoolean creatorIsRoot, AtomicBoolean creatorIsBuildingTree, InetAddress address, 
-			Set<Integer> internalNeighborPorts, List<SpanningTree> spanningTrees, DatagramSocket internalSocket) throws SocketException {
+			Set<Integer> internalNeighborPorts, Map<Integer, SpanningTree> spanningTrees, DatagramSocket internalSocket) throws SocketException {
 		super(name);
 		this.creatorNodePort = creatorNodePort;
 		this.creatorIsRoot = creatorIsRoot;
@@ -55,15 +55,12 @@ public class SpanningTreeParticipant extends Thread {
 				System.out.println("Received message: " + message.action + " from node: " + senderPort);
 				
 				// check if we already have a tree started for this identifier 
-				// if not, start it
-				SpanningTree spanningTree = spanningTrees.stream()
-						.filter(tree -> tree.id == message.identifier)
-						.findAny()
-						.orElse(null);
+				SpanningTree spanningTree = spanningTrees.get(message.identifier);
 				
+				// if not, start it
 				if (spanningTree == null) {
 					spanningTree = new SpanningTree(message.identifier);
-					spanningTrees.add(spanningTree);
+					spanningTrees.put(message.identifier, spanningTree);
 				}
 				
 				switch(message.action) {					

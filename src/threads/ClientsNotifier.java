@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketAddress;
-import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -15,14 +15,14 @@ public class ClientsNotifier extends Thread {
 	private volatile boolean shouldRun = true;
 	private int creatorNodePort;
 	private AtomicBoolean creatorIsRoot;
-	private List<SpanningTree> spanningTrees;
+	private Map<Integer, SpanningTree> spanningTrees;
 	private Queue<SocketAddress> waitingClients;
 	private int checkForClientsAfterMs;
 
 	private DatagramSocket externalSocket = null;
 	private DatagramPacket response = null;
 
-	public ClientsNotifier(String name, int creatorNodePort, AtomicBoolean creatorIsRoot, List<SpanningTree> spanningTrees, 
+	public ClientsNotifier(String name, int creatorNodePort, AtomicBoolean creatorIsRoot, Map<Integer, SpanningTree> spanningTrees, 
 			Queue<SocketAddress> waitingClients, DatagramSocket externalSocket, int checkForClientsAfterMs) {
 		super(name);
 		this.creatorNodePort = creatorNodePort;
@@ -50,10 +50,7 @@ public class ClientsNotifier extends Thread {
 						System.out.println("NOTIFYING CLIENT! " + client);
 
 						// find tree and return the treeExpression
-						String treeExpression = spanningTrees.stream()
-								.filter(st -> st.id == creatorNodePort)
-								.findFirst()
-								.get().treeExpression;
+						String treeExpression = spanningTrees.get(creatorNodePort).treeExpression;
 						System.out.println("[" + this.getName() + ":" + this.creatorNodePort + "]: Tree expression: " + treeExpression);
 
 						buffer = String.valueOf(treeExpression).getBytes();

@@ -1,6 +1,6 @@
 package threads;
 
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import cluster.SpanningTree;
@@ -11,12 +11,12 @@ public class SpanningTreeCleaner extends Thread {
 	private int creatorNodePort;
 	private AtomicBoolean creatorIsRoot;
 	private AtomicBoolean creatorIsBuildingTree;
-	private List<SpanningTree> spanningTrees;
+	private Map<Integer, SpanningTree> spanningTrees;
 	private int checkTreesAfterMs;
 	private int cleanTreeAfterMs;
 	
 	public SpanningTreeCleaner(String name, int creatorNodePort, AtomicBoolean creatorIsRoot, AtomicBoolean creatorIsBuildingTree, 
-			List<SpanningTree> spanningTrees, int checkTreesAfterMs, int cleanTreeAfterMs) {
+			Map<Integer, SpanningTree> spanningTrees, int checkTreesAfterMs, int cleanTreeAfterMs) {
 		super(name);
 		this.creatorNodePort = creatorNodePort;
 		this.creatorIsRoot = creatorIsRoot;

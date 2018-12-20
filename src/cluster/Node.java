@@ -5,11 +5,11 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -25,14 +25,14 @@ public class Node {
 	
 	private AtomicBoolean isRootForTree;
 	private AtomicBoolean isBuildingTree;
-	private List<SpanningTree> spanningTrees;
+	private Map<Integer, SpanningTree> spanningTrees;
 	private Queue<SocketAddress> waitingClients;
 	
 	private DatagramSocket externalSocket, internalSocket;
 	private DatagramPacket request, response;
 	
 	public Node() {
-		spanningTrees = new ArrayList<>();
+		spanningTrees = new ConcurrentHashMap<Integer, SpanningTree>();
 		internalNeighborPorts = new HashSet<>();
 		waitingClients = new ConcurrentLinkedQueue<>();
 		isRootForTree = new AtomicBoolean(false);
@@ -112,7 +112,7 @@ public class Node {
 							// start building own tree
 							SpanningTree myTree = new SpanningTree(internalPort);
 							myTree.parentPort = internalPort;
-							spanningTrees.add(myTree);
+							spanningTrees.put(internalPort, myTree);
 							
 							buffer = new Message(internalPort, "join-tree").toBytes();
 							for(Integer neighborPort : internalNeighborPorts) {
