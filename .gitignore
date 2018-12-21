@@ -6,3 +6,4 @@ bin/cluster/Message.class
 bin/cluster/InitialNode.class
 bin/client/Client.class
 bin/threads/ClientsNotifier.class
+/bin/

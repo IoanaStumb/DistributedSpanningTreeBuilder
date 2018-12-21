@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -166,6 +167,17 @@ public class SpanningTreeParticipant extends Thread {
 								creatorIsBuildingTree.set(false);
 							}
 						}
+						break;
+						
+					case "message":
+						spanningTree.lastMessageSentAt = Instant.now();
+						
+						buffer = "message".getBytes();
+						for(Integer childPort : spanningTree.childrenPorts) {
+							response = new DatagramPacket(buffer, buffer.length, address, childPort);
+							internalSocket.send(response);
+						}	
+						
 						break;
 				};
 			}

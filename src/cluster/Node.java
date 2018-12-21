@@ -19,9 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-
 import threads.ClientsNotifier;
 import threads.SpanningTreeCleaner;
 import threads.SpanningTreeParticipant;
@@ -83,12 +80,14 @@ public class Node {
 //				internalNeighborPorts.add(12003);
 //				break;
 //		}
-		String topology = readFile("E:\\Master\\Anul II\\PPAD\\GitProjects\\DistributedSpanningTreeBuilder\\src\\topology.json", StandardCharsets.UTF_8);
+		String topology = readFile("topology.json", StandardCharsets.UTF_8);
 		
-		List<TopologyNode> allNodes = new Gson().fromJson(topology, 
-				new TypeToken<ArrayList<TopologyNode>>(){}.getType());
+//		List<TopologyNode> allNodes = new Gson().fromJson(topology, 
+//				new TypeToken<ArrayList<TopologyNode>>(){}.getType());
 		
-		allNodes.forEach(node -> System.out.println(node.node));
+		TopologyNode[] allNodes = new Gson().fromJson(topology, TopologyNode[].class);
+		
+		// allNodes.forEach(node -> System.out.println(node.node));
 		
 		SpanningTreeParticipant spanningTreeParticipant = new SpanningTreeParticipant("SpanningTreeParticipant", internalPort, 
 				isRootForTree, isBuildingTree, address, internalNeighborPorts, spanningTrees, internalSocket);
@@ -139,6 +138,13 @@ public class Node {
 					
 					case "send-message":
 						// try to send message to node from tree
+						buffer = "message".getBytes();
+						SpanningTree spanningTree = spanningTrees.get(internalPort);
+						
+						for(Integer childPort : spanningTree.childrenPorts) {
+							response = new DatagramPacket(buffer, buffer.length, address, childPort);
+							internalSocket.send(response);
+						}							
 						break;
 				};
 			}
