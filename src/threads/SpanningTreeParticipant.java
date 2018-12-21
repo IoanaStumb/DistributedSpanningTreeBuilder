@@ -74,7 +74,7 @@ public class SpanningTreeParticipant extends Thread {
 							buffer = new Message(message.identifier, "parent").toBytes();
 							
 							response = new DatagramPacket(buffer, buffer.length, address, senderPort);
-							internalSocket.send(response);
+							Helper.delayedInternalSocketSend(internalSocket, response);
 							
 							// if I am leaf with only one neighbor, I should stop
 							if (internalNeighborPorts.size() == 1 && internalNeighborPorts.iterator().next() == spanningTree.parentPort) {								
@@ -94,7 +94,7 @@ public class SpanningTreeParticipant extends Thread {
 								for(Integer neighborPort : internalNeighborPorts) {
 									if (neighborPort != senderPort) {
 										response = new DatagramPacket(buffer, buffer.length, address, neighborPort);
-										internalSocket.send(response);
+										Helper.delayedInternalSocketSend(internalSocket, response);
 									}
 								}	
 							}
@@ -104,7 +104,7 @@ public class SpanningTreeParticipant extends Thread {
 							buffer = new Message(message.identifier, "already").toBytes();
 							
 							response = new DatagramPacket(buffer, buffer.length, address, senderPort);
-							internalSocket.send(response);
+							Helper.delayedInternalSocketSend(internalSocket, response);
 						}
 						break;
 						
@@ -152,7 +152,6 @@ public class SpanningTreeParticipant extends Thread {
 							
 							// build and set my expression for this tree
 							String expressionTree = spanningTree.buildAndSetTreeExpression(creatorNodePort);
-							System.out.println("My final expression for this tree: " + expressionTree);
 							
 							// if I am not the tree root => send the expression for this spanning tree to my parent						
 							if (creatorNodePort != spanningTree.id) {								
@@ -172,7 +171,12 @@ public class SpanningTreeParticipant extends Thread {
 					case "message":
 						spanningTree.lastMessageSentAt = Instant.now();
 						
-						buffer = "message".getBytes();
+						// print some special message if message was for me
+						if (creatorNodePort == Integer.parseInt(message.optionalContent)) {
+							System.out.println("%%% Someone sent me a special message! %%%");
+						}
+						
+						buffer = new Message(message.identifier, "message", message.optionalContent).toBytes();
 						for(Integer childPort : spanningTree.childrenPorts) {
 							response = new DatagramPacket(buffer, buffer.length, address, childPort);
 							internalSocket.send(response);

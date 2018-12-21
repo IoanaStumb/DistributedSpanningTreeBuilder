@@ -56,7 +56,7 @@ public class SpanningTree {
 		    
 			expression = stringBuilder.toString();
 			
-			// System.out.println(stringBuilder.toString());
+			System.out.println("My tree expression: " + expression);
 		}
 		
 		this.treeExpression = expression;
