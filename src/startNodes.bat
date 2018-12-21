@@ -1,0 +1,7 @@
+start cmd /c "cd E:\Master\Anul II\PPAD\DistributedSpanningTreeBuilder\bin && java cluster.Node 13000 12000 5000 40000 2000 & pause"
+start cmd /c "cd E:\Master\Anul II\PPAD\DistributedSpanningTreeBuilder\bin && java cluster.Node 13001 12001 5000 40000 2000 & pause"
+start cmd /c "cd E:\Master\Anul II\PPAD\DistributedSpanningTreeBuilder\bin && java cluster.Node 13002 12002 5000 40000 2000 & pause"
+start cmd /c "cd E:\Master\Anul II\PPAD\DistributedSpanningTreeBuilder\bin && java cluster.Node 13003 12003 5000 40000 2000 & pause"
+start cmd /c "cd E:\Master\Anul II\PPAD\DistributedSpanningTreeBuilder\bin && java cluster.Node 13004 12004 5000 40000 2000 & pause"
+start cmd /c "cd E:\Master\Anul II\PPAD\DistributedSpanningTreeBuilder\bin && java cluster.Node 13005 12005 5000 40000 2000 & pause"
+start cmd /c "cd E:\Master\Anul II\PPAD\DistributedSpanningTreeBuilder\bin && java cluster.Node 13006 12006 5000 40000 2000 & pause"
