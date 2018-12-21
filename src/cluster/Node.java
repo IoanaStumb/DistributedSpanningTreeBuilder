@@ -53,41 +53,7 @@ public class Node {
 		externalSocket = new DatagramSocket(this.externalPort);
 		internalSocket = new DatagramSocket(this.internalPort);
 		
-		// replace with neighbor initialization routine
-//		switch(this.internalPort) {
-//			case 12000:
-//				internalNeighborPorts.add(12001);
-//				internalNeighborPorts.add(12002);
-//				break;
-//			case 12001:
-//				internalNeighborPorts.add(12003);
-//				internalNeighborPorts.add(12004);
-//				break;
-//			case 12002:
-//				internalNeighborPorts.add(12001);
-//				internalNeighborPorts.add(12003);
-//				break;
-//			case 12003:
-//				internalNeighborPorts.add(12006);
-//				break;
-//			case 12004:
-//				internalNeighborPorts.add(12005);
-//				break;
-//			case 12005:
-//				internalNeighborPorts.add(12004);
-//				break;
-//			case 12006:
-//				internalNeighborPorts.add(12003);
-//				break;
-//		}
-		String topology = readFile("topology.json", StandardCharsets.UTF_8);
-		
-//		List<TopologyNode> allNodes = new Gson().fromJson(topology, 
-//				new TypeToken<ArrayList<TopologyNode>>(){}.getType());
-		
-		TopologyNode[] allNodes = new Gson().fromJson(topology, TopologyNode[].class);
-		
-		// allNodes.forEach(node -> System.out.println(node.node));
+		addNeighbors();
 		
 		SpanningTreeParticipant spanningTreeParticipant = new SpanningTreeParticipant("SpanningTreeParticipant", internalPort, 
 				isRootForTree, isBuildingTree, address, internalNeighborPorts, spanningTrees, internalSocket);
@@ -153,10 +119,19 @@ public class Node {
 			internalSocket.close();
 		}
 	}
-	
-	private static String readFile(String path, Charset encoding) throws IOException {
-		byte[] encoded = Files.readAllBytes(Paths.get(path));
-		return new String(encoded, encoding);
+
+	private void addNeighbors() throws IOException {		
+		List<String> lines = Files.readAllLines(Paths.get("topology.txt"), Charset.defaultCharset());
+		
+		for (String line : lines) {
+			String[] tokens = line.split(":");
+			
+			if (internalPort == Integer.parseInt(tokens[0])) {				
+				for (int i = 1; i < tokens.length; i++) {
+					internalNeighborPorts.add(Integer.parseInt(tokens[i]));
+				}
+			}
+		}
 	}
 	
 	public static void main(String[] args) {
