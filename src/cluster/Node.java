@@ -6,10 +6,9 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +19,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import threads.ClientsNotifier;
+import threads.Helper;
 import threads.SpanningTreeCleaner;
 import threads.SpanningTreeParticipant;
 
@@ -45,7 +45,7 @@ public class Node {
 		isBuildingTree = new AtomicBoolean(false);
 	}
 
-	public void initialize(int externalPort, int internalPort) throws IOException {
+	public void initialize(int externalPort, int internalPort, int checkTreesAfterMs, int cleanTreeAfterMs, int checkForClientsAfterMs) throws IOException {
 		this.externalPort = externalPort;
 		this.internalPort = internalPort;
 		
@@ -58,9 +58,9 @@ public class Node {
 		SpanningTreeParticipant spanningTreeParticipant = new SpanningTreeParticipant("SpanningTreeParticipant", internalPort, 
 				isRootForTree, isBuildingTree, address, internalNeighborPorts, spanningTrees, internalSocket);
 		SpanningTreeCleaner spanningTreeCleaner = new SpanningTreeCleaner("SpanningTreeCleaner", internalPort, isRootForTree,
-				isBuildingTree, spanningTrees, 5000, 10000);
+				isBuildingTree, spanningTrees, checkTreesAfterMs, cleanTreeAfterMs);
 		ClientsNotifier clientsNotifier = new ClientsNotifier("ClientsNotifier", internalPort, isRootForTree, spanningTrees,
-				waitingClients, externalSocket, 2000);
+				waitingClients, externalSocket, checkForClientsAfterMs);
 		
 		spanningTreeParticipant.start();
 		spanningTreeCleaner.start();
@@ -80,7 +80,10 @@ public class Node {
 				
 				System.out.println("Client address and port: " + senderAddress + ", message: " + message);
 				
-				switch(message) {
+				String[] messageTokens = message.split(" ");
+				String messageAction = messageTokens[0];
+				
+				switch(messageAction) {
 					case "request-tree":
 						// add clients to waiting queue, ClientsNotifier thread will deal with them
 						waitingClients.add(senderAddress);
@@ -97,20 +100,32 @@ public class Node {
 							buffer = new Message(internalPort, "join-tree").toBytes();
 							for(Integer neighborPort : internalNeighborPorts) {
 								response = new DatagramPacket(buffer, buffer.length, address, neighborPort);
-								internalSocket.send(response);
+								Helper.delayedInternalSocketSend(internalSocket, response);
 							}
 						}
 						break;
 					
 					case "send-message":
 						// try to send message to node from tree
-						buffer = "message".getBytes();
+						buffer = new Message(internalPort, "message", messageTokens[1]).toBytes();
 						SpanningTree spanningTree = spanningTrees.get(internalPort);
 						
-						for(Integer childPort : spanningTree.childrenPorts) {
-							response = new DatagramPacket(buffer, buffer.length, address, childPort);
-							internalSocket.send(response);
-						}							
+						// no spanning tree => ask client to request one
+						if (spanningTree == null) {
+							buffer = "No spanning tree available with this node as root! Please request for one.".getBytes();
+							
+							response = new DatagramPacket(buffer, buffer.length, senderAddress);
+							externalSocket.send(response);
+						}
+						else {
+							// refresh the lastMessageAt field 
+							spanningTree.lastMessageSentAt = Instant.now();
+							
+							for(Integer childPort : spanningTree.childrenPorts) {
+								response = new DatagramPacket(buffer, buffer.length, address, childPort);
+								internalSocket.send(response);
+							}	
+						}					
 						break;
 				};
 			}
@@ -120,7 +135,7 @@ public class Node {
 		}
 	}
 
-	private void addNeighbors() throws IOException {		
+	private void addNeighbors() throws IOException {
 		List<String> lines = Files.readAllLines(Paths.get("topology.txt"), Charset.defaultCharset());
 		
 		for (String line : lines) {
@@ -141,8 +156,15 @@ public class Node {
 			int externalPort = Integer.parseInt(args[0]);
 			int internalPort = Integer.parseInt(args[1]);
 			
+			System.out.println("External port: " + externalPort);
+			System.out.println("Internal port: " + internalPort);
+			
+			int checkTreesAfterMs = Integer.parseInt(args[2]);
+		    int cleanTreeAfterMs = Integer.parseInt(args[3]);
+		    int checkForClientsAfterMs = Integer.parseInt(args[4]);
+			
 			clusterNode = new Node();
-			clusterNode.initialize(externalPort, internalPort);
+			clusterNode.initialize(externalPort, internalPort, checkTreesAfterMs, cleanTreeAfterMs, checkForClientsAfterMs);
 			clusterNode.runServer();
 			
 		} catch (IOException e) {
