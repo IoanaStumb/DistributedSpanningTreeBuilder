@@ -1,6 +1,7 @@
 package client;
 
 import java.net.*;
+import java.util.Arrays;
 import java.io.*;
 
 public class Client {
@@ -11,24 +12,50 @@ public class Client {
 		DatagramSocket socket = null;
 		DatagramPacket packet = null;
 		byte[] buffer = null;
+		
+		SpanningTreeReceiver spanningTreeReceiver = null;
 
 		try {
 			BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
 			socket = new DatagramSocket();
 			
+			// start the tree receiver
+			spanningTreeReceiver = new SpanningTreeReceiver("SpanningTreeReceiver", socket);
+			spanningTreeReceiver.start();
+			
 			String userInput;
-            while ((userInput = stdIn.readLine()) != null) {
-            	String[] tokens = userInput.split(" ");
-            	String message = tokens[0];
-            	int port = Integer.parseInt(tokens[1]);
+            while (true) {
+            	userInput = stdIn.readLine();
             	
-            	buffer = message.getBytes();
+            	if (userInput.equals("close")) {
+            		break;
+            	}
+            	
+            	String[] tokens = userInput.split(" ");   
+            	int port = Integer.parseInt(tokens[0]);
+            	String message = tokens[1];
+            	
+            	if (!Arrays.asList("request-tree", "send-message").contains(message)) {
+            		System.out.println("Action not allowed!");
+            		break;
+            	}
+            	
+            	if (!message.equals("send-message")) {
+            		buffer = message.getBytes();
+            	}
+            	else {
+            		buffer = new String(message + " " + tokens[2]).getBytes();
+            	}
+            	        	
             	packet = new DatagramPacket(buffer, buffer.length, address, port);
-//                out.println(userInput);
-//                System.out.println("echo: " + in.readLine());
+            	socket.send(packet);
             }
-			socket.send(packet);
-		} finally {
+		} 
+		catch (NumberFormatException exception) {
+			exception.printStackTrace();
+		}
+		finally {
+			spanningTreeReceiver.finish();
 			socket.close();
 		}
 	}
